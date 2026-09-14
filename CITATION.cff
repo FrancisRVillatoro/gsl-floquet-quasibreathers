@@ -18,6 +18,11 @@ authors:
 license: BSD-3-Clause
 version: "1.0.0"
 date-released: "2026-09-12"
+doi: "10.5281/zenodo.22757891"
+identifiers:
+  - type: doi
+    value: "10.5281/zenodo.22757890"
+    description: "Concept DOI for all versions"
 keywords:
   - graphene superlattice
   - quasi-breather
