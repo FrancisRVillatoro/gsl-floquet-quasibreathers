@@ -68,6 +68,10 @@ total energy.
 
 ## Citing
 
+Archived release v1.0.0: https://doi.org/10.5281/zenodo.22757891
+
+Concept DOI for all versions: https://doi.org/10.5281/zenodo.22757890
+
 See `CITATION.cff`. Please cite both the archived release and the paper.
 
 ## License
