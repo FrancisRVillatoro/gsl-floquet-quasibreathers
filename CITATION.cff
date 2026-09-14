@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+message: "If you use this software or data, please cite both the archived release and the paper."
+title: "Quenching the radiation of quasi-breathers in a Floquet-dressed graphene superlattice equation: code, data and figures"
+type: software
+authors:
+  - family-names: "Martin-Vergara"
+    given-names: "Francisca"
+    orcid: "https://orcid.org/0000-0003-1478-8444"
+    affiliation: "Servicio de Sistemas Informáticos y Comunicaciones, Universidad de Málaga, 29071 Málaga, Spain"
+  - family-names: "Rus"
+    given-names: "Francisco"
+    orcid: "https://orcid.org/0000-0002-7641-0255"
+    affiliation: "Escuela de Ingenierías Industriales, Universidad de Málaga, 29071 Málaga, Spain"
+  - family-names: "Villatoro"
+    given-names: "Francisco R."
+    orcid: "https://orcid.org/0000-0003-4314-6213"
+    affiliation: "Escuela de Ingenierías Industriales, Universidad de Málaga, 29071 Málaga, Spain"
+license: BSD-3-Clause
+version: "1.0.0"
+date-released: "2026-09-12"
+keywords:
+  - graphene superlattice
+  - quasi-breather
+  - sine-Gordon
+  - exponential asymptotics
+  - Stokes constant
+  - dynamic localisation
