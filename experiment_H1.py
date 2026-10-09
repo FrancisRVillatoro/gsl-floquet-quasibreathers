@@ -31,6 +31,7 @@ import matplotlib.pyplot as plt
 import gsl_floquet as gf
 from qb_newton import HarmonicBalance, sg_breather_harmonics, small_amplitude_coefficients
 from kg_spectral import SpectralKG, zero_crossing_frequency
+from results_io import save_csv
 
 # ---------------------------------------------------------------- parameters
 b = 0.5
@@ -39,7 +40,7 @@ K = 10                         # harmonics kept in the harmonic balance
 L, N = 140.0, 1024             # box for both the Newton solve and the time-domain run
 sponge = dict(x_s=45.0, width=22.0, sigma0=0.8)
 periods_total, periods_fit = 200, 100
-a_values = [0.0, 0.3, 0.6, 0.8016, 1.0, 1.2, 1.5, 1.8]
+a_values = [0.0, 0.3, 0.6, 0.8016, 1.0, 1.2, 1.25, 1.3, 1.5, 1.8]
 
 if __name__ == "__main__":
     rows = []
@@ -94,6 +95,12 @@ if __name__ == "__main__":
               f"({t_nf:.1f}+{t_td:.0f} s)")
         rows.append(dict(a=a, kappa=k1, d3=abs(d.d[2]), eta5=eta5, core=hb.core_amplitude(U),
                          tail=hb.tail_amplitude(U), P=P, w0=w0, w1=w1, rec=rec, E0=E0, T=T))
+
+    # ---------------------------------------------------------------- published dataset
+    if rows:
+        save_csv("power_vs_a_b0.5_Om0.8.csv",
+                 ["a", "P_per_period_over_E0"],
+                 [(r["a"], r["P"]) for r in rows])
 
     # ---------------------------------------------------------------- figure
     if rows:

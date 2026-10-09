@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 
 import gsl_floquet as gf
 import paper_style as ps
+from results_io import result_path
 
 ps.use()
 A0 = special.jn_zeros(0, 1)[0] / 2
@@ -21,7 +22,7 @@ PI2 = np.pi * np.sqrt(2.0)
 
 
 def load(name):
-    return np.genfromtxt(f"results/{name}.csv", delimiter=",", names=True)
+    return np.genfromtxt(result_path(f"{name}.csv"), delimiter=",", names=True)
 
 
 # ---------------------------------------------------------------- Fig. 1
@@ -86,7 +87,7 @@ def fig2():
     ac = 0.5 * (-pl[1] / pl[0] - ph[1] / ph[0])
     ax[1].plot(s, np.where(s < ac, -r, r), "o")
     xl = np.linspace(s[0], ac, 30); xh = np.linspace(ac, s[-1], 30)
-    ax[1].plot(xl, -np.polyval(pl, xl), "-", lw=0.7, color=ps.PALETTE[1])
+    ax[1].plot(xl, np.polyval(pl, xl), "-", lw=0.7, color=ps.PALETTE[1])
     ax[1].plot(xh, np.polyval(ph, xh), "-", lw=0.7, color=ps.PALETTE[1])
     ax[1].axhline(0, color="gray", lw=0.5)
     ax[1].set_xlabel("$a$"); ax[1].set_ylabel("$\\pm\\sqrt{P\\,T/E_0}$")
@@ -134,11 +135,11 @@ def fig3():
 
 # ---------------------------------------------------------------- Fig. 4
 def fig4():
-    k = load("stokes_K_of_epsilon"); mp = load("ac_map_b_Omega")
+    k = load("stokes_K_of_epsilon"); mp = load("ac_map_b_Omega"); sc = load("stokes_constants_inner")
     fig, ax = plt.subplots(1, 2, figsize=(7.0, 2.7))
     eps = k["epsilon"]; q3 = np.sqrt(8 - 9 * eps ** 2)
     y = np.log(k["K_richardson"]) + np.pi * q3 / (2 * eps)
-    L0 = 26.8212683851059
+    L0 = float(sc["Lambda0"][np.argmin(np.abs(sc["m"] - 2))])
     ax[0].plot(eps ** 2, y - np.log(L0), "o")
     c = np.linalg.lstsq(np.column_stack([eps ** 2, eps ** 4]), y - np.log(L0), rcond=None)[0]
     xx = np.linspace(0, eps.max() ** 2, 50)
@@ -180,7 +181,7 @@ def fig6():
     v = load("collisions_vcr_b1_Om0.8"); ak = load("kink_a_k_vs_b")
     fig, ax = plt.subplots(1, 2, figsize=(7.0, 2.7))
     for b in [0.25, 0.5, 1.0]:
-        r = np.genfromtxt(f"results/kink_modes_b{b}.csv", delimiter=",", names=True)
+        r = np.genfromtxt(result_path(f"kink_modes_b{b}.csv"), delimiter=",", names=True)
         ok = ~np.isnan(r["internal_omega2"])
         ax[0].plot(r["a"][ok], np.sqrt(np.maximum(r["kappa"][ok] - r["internal_omega2"][ok], 0)),
                    "o-", ms=2.5, label=f"$b$ = {b}")

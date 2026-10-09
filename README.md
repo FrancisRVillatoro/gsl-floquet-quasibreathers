@@ -15,9 +15,11 @@ cancellation at the zeros of J_0(2a).
 
     *.py                 library modules and experiment scripts (see below)
     test_*.py            five test-suites, 199 tests, about 45 s in total
-    results/*.csv        every measured dataset, one file per quantity
+    results/*.csv        numerical datasets and convergence audits
     figures/*.pdf,*.png  the six publication figures, built from results/
-    run_all.sh           regenerates every number and figure (about 75 min)
+    run_all.sh           regenerates and audits every published CSV and figure
+    verify_results.py     checks completeness and CSV schemas before installation
+    results_io.py         deterministic output paths/CSV writer used by experiments
     requirements.txt     pinned library versions
 
 ### Library
@@ -37,7 +39,7 @@ cancellation at the zeros of J_0(2a).
 `experiment_ratio.py`, `experiment_second_zero.py`, `experiment_ac_map.py`,
 `experiment_kink_modes.py`, `experiment_collisions.py`, plus `example_radiation.py` and
 `fig_gsl_floquet.py` as illustrations. Each has a docstring stating what it measures and how
-long it takes, and each writes its results to the log and (where applicable) to `results/`.
+long it takes, and each writes its published numerical outputs to `results/`.
 
 ## Reproducing
 
@@ -50,12 +52,33 @@ To redraw the figures without re-running the simulations:
 
 ## Data
 
-`results/` holds the measured quantities as CSV, one file per quantity, with the parameters
-in the file name. Among them: the radiated power against the HF amplitude and against the
+`results/` holds the numerical quantities used by the paper as CSV, one file per quantity, with the parameters
+in the file name. `run_all.sh` recomputes them into a temporary staging directory; `verify_results.py`
+requires all 20 archived datasets (18 primary datasets plus the two pre-submission convergence datasets) to be present with the expected schemas before the staged directory
+can replace `results/`. Thus an interrupted run cannot leave a partially regenerated published dataset. Among them: the radiated power against the HF amplitude and against the
 frequency, the harmonic content of the emitted field, the Stokes function K(epsilon), the
 cancellation points at both zeros of J_0(2a) and their map in (b, Omega), the continuation at
 b = 1, the Stokes constants from the inner problem, the kink spectra and the critical
 velocities for capture.
+
+### Provenance of the published CSV files
+
+| dataset | producer |
+|---|---|
+| `power_vs_a_b0.5_Om0.8.csv` | `experiment_H1.py` |
+| `fine_scan_b0.5_Om0.8.csv`, `emitted_harmonics_b0.5_Om0.8.csv` | `experiment_ac.py` |
+| `power_vs_Omega_a0.6_b0.5.csv`, `power_vs_b_a0.6_Om0.8.csv`, measured part of `ac_first_zero_vs_b_Om0.8.csv` | `experiment_asymptotics.py` |
+| `stokes_K_of_epsilon.csv`, `gsl_prediction_vs_measurement.csv` | `stokes_constant.py` |
+| prediction in `ac_first_zero_vs_b_Om0.8.csv`, `stokes_constants_inner.csv` | `experiment_ratio.py` + `inner_problem.py` |
+| `second_zero_scans_Om0.8.csv`, `ac_second_zero_vs_b_Om0.8.csv` | `experiment_second_zero.py` |
+| `ac_map_b_Omega.csv`, `b1_continuation_Om0.92.csv` | `experiment_ac_map.py` |
+| `kink_a_k_vs_b.csv` | `kink_threshold.py` |
+| `kink_modes_b0.25.csv`, `kink_modes_b0.5.csv`, `kink_modes_b1.0.csv` | `experiment_kink_modes.py` |
+| `collisions_vcr_b1_Om0.8.csv` | `experiment_collisions.py` |
+
+The targeted pre-submission convergence audit additionally writes
+`convergence_minimum_a1p25.csv` and `convergence_ac_strict.csv`; these are validation datasets,
+not inputs to the six publication figures.
 
 ## Numerical conventions
 
@@ -67,10 +90,6 @@ different nonlinearities comparable. Radiated power is reported per period, rela
 total energy.
 
 ## Citing
-
-Archived release v1.0.0: https://doi.org/10.5281/zenodo.22757891
-
-Concept DOI for all versions: https://doi.org/10.5281/zenodo.22757890
 
 See `CITATION.cff`. Please cite both the archived release and the paper.
 

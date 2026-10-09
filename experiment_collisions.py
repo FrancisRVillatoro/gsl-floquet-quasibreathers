@@ -26,6 +26,7 @@ import matplotlib.pyplot as plt
 import gsl_floquet as gf
 from kg_spectral import SpectralKG
 from kink_threshold import a_internal_mode_vanishes
+from results_io import save_csv
 
 L, N, X0 = 200.0, 2048, 15.0
 
@@ -101,6 +102,7 @@ if __name__ == "__main__":
         vc = critical_velocity(d)
         vcr.append(vc)
         print(f"   -> v_cr = {vc:.4f}   ({time.perf_counter()-t0:.0f} s)", flush=True)
+    save_csv("collisions_vcr_b1_Om0.8.csv", ["a", "v_cr"], zip(a_vals, vcr))
     fig, ax = plt.subplots(figsize=(6, 4.2))
     ax.plot(a_vals, vcr, "o-")
     ax.axvline(a_k, color="gray", ls="--", lw=0.8)

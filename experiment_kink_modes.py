@@ -28,6 +28,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 import gsl_floquet as gf
+from results_io import result_path
 
 L, N = 300.0, 1536
 
@@ -66,7 +67,7 @@ if __name__ == "__main__":
             rows.append((a, kappa, zero, internal))
         rows = np.array(rows)
         results[b] = rows
-        np.savetxt(f"results/kink_modes_b{b}.csv", rows, delimiter=",",
+        np.savetxt(result_path(f"kink_modes_b{b}.csv"), rows, delimiter=",",
                    header="a,kappa,zero_mode,internal_omega2", comments="")
         print(f"\nb = {b}   (regime I ends at a_* = {a_star:.4f};  {time.perf_counter()-t0:.0f} s)")
         print("     a      kappa     zero mode   internal omega^2/kappa   kappa_b = sqrt(kappa - omega_i^2)")

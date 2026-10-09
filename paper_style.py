@@ -1,4 +1,9 @@
-"""Common matplotlib style for the published figures.  Import and call `use()`."""
+"""Common matplotlib style and deterministic publication-figure writer."""
+from __future__ import annotations
+
+import os
+from datetime import datetime, timezone
+from pathlib import Path
 import matplotlib as mpl
 
 PALETTE = ["#1f4e79", "#c0392b", "#1e8449", "#b7791f", "#6c3483", "#117a8b"]
@@ -24,8 +29,20 @@ def panel(ax, label, x=-0.16, y=1.02):
     ax.text(x, y, f"({label})", transform=ax.transAxes, fontweight="bold", fontsize=9)
 
 
+def figures_dir() -> Path:
+    p = Path(os.environ.get("GSL_FIGURES_DIR", "figures"))
+    p.mkdir(parents=True, exist_ok=True)
+    return p
+
+
 def save(fig, name):
-    """Write figures/<name>.pdf and figures/<name>.png."""
-    for ext in ("pdf", "png"):
-        fig.savefig(f"figures/{name}.{ext}")
-    print(f"   figures/{name}.pdf, .png")
+    """Write deterministic PDF/PNG publication figures."""
+    root = figures_dir()
+    # Fix PDF timestamps so reruns with identical numeric inputs can be byte-compared.
+    pdf_meta = {
+        "Creator": "gsl-floquet-quasibreathers make_figures.py",
+        "CreationDate": datetime(2026, 9, 20, tzinfo=timezone.utc),
+    }
+    fig.savefig(root / f"{name}.pdf", metadata=pdf_meta)
+    fig.savefig(root / f"{name}.png", metadata={"Software": "gsl-floquet-quasibreathers"})
+    print(f"   {root}/{name}.pdf, .png")

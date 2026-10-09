@@ -26,6 +26,8 @@ import numpy as np
 from scipy import special
 
 import gsl_floquet as gf
+import inner_problem as ip
+from results_io import result_path, save_csv
 from qb_newton import HarmonicBalance, sg_breather_harmonics, emitted_harmonics
 from kg_spectral import SpectralKG
 
@@ -100,10 +102,34 @@ if __name__ == "__main__":
     a0 = special.jn_zeros(0, 1)[0] / 2
     print(f"\ncross-check against the measured a_c(b)  (a_0 = j01/2 = {a0:.7f})")
     print("     b      term from V_3    term from V_4    predicted a_c    measured a_c")
-    for b, ac_meas in [(0.125, 1.2054), (0.25, 1.2148), (0.5, 1.2535)]:
+    measured = np.genfromtxt(result_path("ac_first_zero_vs_b_Om0.8.csv"), delimiter=",", names=True)
+    pred_rows = []
+    for row in np.atleast_1d(measured):
+        b = float(row["b"]); ac_meas = float(row["a_c_measured"])
         c = gf.fourier_coefficients(b)
         den = 2 * c[1] * special.j1(2 * a0)
         t3 = c[2] * special.j0(3 * a0) * ratio / den
         t4 = c[3] * special.j0(4 * a0) * ratio4 / den
-        print(f"   {b:.3f}   {t3:+.5f}         {t4:+.5f}         {a0 + t3 + t4:.4f}           {ac_meas:.4f}")
-    print("   (V_3 gives the b^2 term, V_4 the b^4 term; what is left at b = 0.5 is O(b^6))")
+        pred = a0 + t3 + t4
+        pred_rows.append((b, ac_meas, pred))
+        print(f"   {b:.3f}   {t3:+.5f}         {t4:+.5f}         {pred:.4f}           {ac_meas:.4f}")
+    save_csv("ac_first_zero_vs_b_Om0.8.csv",
+             ["b", "a_c_measured", "a_c_predicted_V3_V4"], pred_rows)
+
+    # Assemble the published inner/Stokes summary from the exact-rational inner recursion
+    # and the finite-epsilon canonical ratios just measured above.
+    inner = []
+    D2 = None
+    vals = {}
+    for m in [2, 3, 4, 5]:
+        D, Lam, _ = ip.stokes_constant(161, 21, m)
+        vals[m] = (D, Lam)
+        if m == 2: D2 = D
+    for m in [2, 3, 4, 5]:
+        D, Lam = vals[m]
+        r06 = 1.0 if m == 2 else ratio if m == 3 else ratio4 if m == 4 else np.nan
+        inner.append((m, D, Lam, D / D2, r06))
+    save_csv("stokes_constants_inner.csv",
+             ["m", "D", "Lambda0", "ratio_to_m2_eps0", "ratio_to_m2_eps0.6"], inner)
+    print("   (V_3 gives the leading O(b^2) displacement; V_4 is one O(b^4) contribution,")
+    print("    not a complete O(b^4) expansion.)")

@@ -11,6 +11,7 @@ limitations, unlike diagonalisation, which loses the mode when its decay length 
 import numpy as np
 from scipy import integrate, interpolate, optimize, special
 import gsl_floquet as gf
+from results_io import save_csv
 
 
 def edge_slope(d, X=None):
@@ -55,11 +56,14 @@ if __name__ == "__main__":
     print("   ratios w_3/w_2 = %.4f,  w_4/w_2 = %.4f" % (w[3] / w[2], w[4] / w[2]))
     a0 = j01_2
     print("\n b       a_k measured   a_k predicted (V_3 + V_4 terms)   shift/b^2 measured   predicted")
+    rows = []
     for b in [0.125, 0.25, 0.5, 1.0]:
         ak = a_internal_mode_vanishes(b)
         c = gf.fourier_coefficients(b)
         den = 2 * c[1] * special.j1(2 * a0)
         pred = a0 + (c[2] * special.j0(3 * a0) * w[3] / w[2] + c[3] * special.j0(4 * a0) * w[4] / w[2]) / den
+        rows.append((b, ak, pred))
         print("  %.3f    %.5f         %.5f                        %+.4f              %+.4f"
               % (b, ak, pred, (ak - a0) / b ** 2, (pred - a0) / b ** 2))
+    save_csv("kink_a_k_vs_b.csv", ["b", "a_k_measured", "a_k_predicted_V3_V4"], rows)
     print("\n j_01/2 = %.5f" % j01_2)

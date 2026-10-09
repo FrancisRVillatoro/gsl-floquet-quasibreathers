@@ -39,6 +39,7 @@ import matplotlib.pyplot as plt
 import gsl_floquet as gf
 from qb_newton import HarmonicBalance, sg_breather_harmonics, small_amplitude_coefficients
 from kg_spectral import SpectralKG
+from results_io import save_csv
 
 K_HARM, L, N = 10, 140.0, 1024
 SPONGE = dict(x_s=45.0, width=22.0, sigma0=0.8)
@@ -83,6 +84,8 @@ if __name__ == "__main__":
               f"{0.5*np.log(p):8.4f}   ({time.perf_counter()-t0:.0f} s)")
     P1 = np.array(P1)
     eps = np.sqrt(1 - Omegas ** 2)
+    save_csv("power_vs_Omega_a0.6_b0.5.csv",
+             ["Omega", "epsilon", "P_per_period_over_E0"], zip(Omegas, eps, P1))
     q3 = np.sqrt(8 - 9 * eps ** 2)
     E = np.pi * q3 / (2 * eps)
     M = np.column_stack([np.ones_like(E), -E, np.log(eps)])
@@ -104,6 +107,12 @@ if __name__ == "__main__":
         P2.append(p)
         print(f"   b = {b:.3f}   P = {p:.4e}   P/b^4 = {p/b**4:.4e}   ({time.perf_counter()-t0:.0f} s)")
     P2 = np.array(P2)
+    rho_exact = []
+    for b in bs:
+        c = gf.fourier_coefficients(b)
+        rho_exact.append(c[1] * special.j0(1.2) / (c[0] * special.j0(0.6)))
+    save_csv("power_vs_b_a0.6_Om0.8.csv",
+             ["b", "rho_exact", "P_per_period_over_E0"], zip(bs, rho_exact, P2))
     sl = np.polyfit(np.log(bs), np.log(P2), 1)[0]
     print(f"   measured exponent d ln P / d ln b = {sl:.3f}   (prediction 4)")
 
@@ -124,10 +133,10 @@ if __name__ == "__main__":
             C, ac, F = par
             return C * (aa - ac) ** 2 + abs(F)
 
-            ok = np.isfinite(pp)
+        ok = np.isfinite(pp)
         aa, pp = aa[ok], pp[ok]
         guess = [np.nanmax(pp) / (0.5 * (hi - lo)) ** 2, aa[int(np.argmin(pp))], np.nanmin(pp)]
-        sol = optimize.least_squares(lambda par: (model(par) - pp) / pp, guess)
+        sol = optimize.least_squares(lambda par: (model(par, aa) - pp) / pp, guess)
         ac = sol.x[1]
         J = sol.jac
         cov = np.linalg.inv(J.T @ J) * np.sum(sol.fun ** 2) / max(len(aa) - 3, 1)
@@ -141,6 +150,10 @@ if __name__ == "__main__":
     sl2 = np.polyfit(bs ** 2, acs, 1)
     print(f"   linear fit a_c = A + B b^2:  A = {sl2[1]:.4f}  (prediction {j01_2:.4f}),  B = {sl2[0]:.4f}")
     print(f"   using only b <= 0.5:  A = {np.polyfit(bs[:3]**2, acs[:3], 1)[1]:.4f}")
+    # Prediction column is filled by experiment_ratio.py, which computes K_3/K_2 and K_4/K_2.
+    save_csv("ac_first_zero_vs_b_Om0.8.csv",
+             ["b", "a_c_measured", "a_c_predicted_V3_V4"],
+             [(b, ac, np.nan) for b, ac in zip(bs[:3], acs[:3])])
 
     # ================================================================ figure
     fig, ax = plt.subplots(1, 3, figsize=(15, 4.2))

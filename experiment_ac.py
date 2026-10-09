@@ -30,6 +30,7 @@ import gsl_floquet as gf
 from qb_newton import (HarmonicBalance, sg_breather_harmonics, small_amplitude_coefficients,
                        born_radiation, emitted_harmonics)
 from kg_spectral import SpectralKG
+from results_io import save_csv
 
 b, Omega, K = 0.5, 0.8, 10
 L, N = 140.0, 1024
@@ -75,7 +76,10 @@ if __name__ == "__main__":
         p, bo, info = radiated_power(a)
         P.append(p); born3.append(bo[3]["p"])
         print(f"  {a:.4f}  {p:.5e}  {np.sqrt(max(p,0)):.4e}   {bo[3]['p']:.4e}   ({time.perf_counter()-t0:.0f} s)")
-    P = np.array(P); s = np.sqrt(P)
+    P = np.array(P); born3 = np.array(born3); s = np.sqrt(P)
+    save_csv("fine_scan_b0.5_Om0.8.csv",
+             ["a", "P_per_period_over_E0", "first_born_p3"],
+             zip(a_scan, P, born3))
     left = np.polyfit(a_scan[a_scan <= 1.245], s[a_scan <= 1.245], 1)
     right = np.polyfit(a_scan[a_scan >= 1.26], s[a_scan >= 1.26], 1)
     ac_l, ac_r = -left[1] / left[0], -right[1] / right[0]
@@ -89,6 +93,7 @@ if __name__ == "__main__":
     print("last column is an independent estimate of the same power measured by the sponges.")
     print("    a        |A1| (evanescent)   |A3|         |A5|        sum_k P_k T / E0    measured")
     harm = {}
+    harm_rows = []
     for a in [0.0, 1.25, 1.5]:
         d, hb, U, k1, omega, info = solve(a)
         kg = SpectralKG(L, N, d.F, d.G, kappa=k1, sponge=sponge, G_ref=0.0)
@@ -103,8 +108,13 @@ if __name__ == "__main__":
             if w2 > 0:
                 flux += A[k] ** 2 * (k * omega) * np.sqrt(w2)
         pm, _, _ = radiated_power(a)
+        flux_norm = flux * 2 * np.pi / omega / E0
+        harm_rows.append((a, A[1], A[3], A[5], A[7], flux_norm, pm))
         print(f"  {a:.4f}   {A[1]:.3e}          {A[3]:.3e}    {A[5]:.3e}   "
-              f"{flux * 2 * np.pi / omega / E0:.4e}         {pm:.4e}")
+              f"{flux_norm:.4e}         {pm:.4e}")
+    save_csv("emitted_harmonics_b0.5_Om0.8.csv",
+             ["a", "A1_evanescent", "A3", "A5", "A7",
+              "flux_per_period_over_E0", "sponge_per_period_over_E0"], harm_rows)
     print("  at a_c the third harmonic falls to the level of the fifth, which does not vanish there;")
     print("  the residual power at the minimum is therefore set by the fifth harmonic.")
 

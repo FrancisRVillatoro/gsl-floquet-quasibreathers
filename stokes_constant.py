@@ -15,21 +15,28 @@ therefore linear in rho at leading order, and the object to compute is
     Kcal(epsilon) = lim_{rho -> 0} |A_3| / rho,     epsilon = sqrt(1 - Omega^2),
 
 the third-harmonic far-field amplitude per unit rho of the breather of reduced frequency
-Omega.  The asymptotic prediction of Section 3 of the paper is
+Omega.  The formal inner calculation fixes the asymptotic normalization independently,
 
-    Kcal(epsilon) ~ C epsilon^gamma exp(-pi sqrt2 / epsilon),
+    gamma = 0,     Lambda_0 = pi |D|,
 
-and C is the Stokes constant.  Both C and gamma are obtained here by fitting Kcal over a
-range of epsilon, exactly as Segur and Kruskal had to determine the analogous constant for
-the phi^4 breather numerically.
+while the exact third-harmonic dispersion gives q_3 = sqrt(8 - 9 epsilon^2).  The
+finite-epsilon canonical response is therefore calibrated with Lambda_0 held fixed,
+
+    Kcal(epsilon) =
+        Lambda_0 exp[-pi q_3/(2 epsilon) + c_2 epsilon^2 + c_4 epsilon^4].
+
+The older finite-range fit C epsilon^gamma exp(-pi sqrt(2)/epsilon) is retained only as
+a diagnostic of how omitted dispersion corrections can mimic an effective power; its
+gamma is not interpreted as the asymptotic exponent.
 
 The script does four things.
 
   (1) checks that |A_3| / rho is independent of rho (linearity in the perturbation);
   (2) computes Kcal(epsilon) over a range of Omega;
-  (3) fits ln Kcal + pi sqrt2 / epsilon = ln C + gamma ln epsilon;
-  (4) tests the resulting prediction |A_3| = rho Kcal(epsilon) against a direct measurement
-      on the GSL equation itself at small b, where no fitted quantity intervenes.
+  (3) fixes Lambda_0 from the inner recursion and calibrates only c_2 and c_4 from the
+      canonical finite-epsilon response;
+  (4) tests |A_3| = rho Kcal(epsilon) against direct GSL measurements, with no GSL
+      validation row used in the calibration.
 
 Run:  python stokes_constant.py     (about 8 minutes)
 """
@@ -42,9 +49,11 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 import gsl_floquet as gf
+import inner_problem as ip
 from qb_newton import (HarmonicBalance, sg_breather_harmonics, small_amplitude_coefficients,
                        emitted_harmonics)
 from kg_spectral import SpectralKG
+from results_io import save_csv
 
 K_HARM, L, N = 10, 160.0, 1024
 SPONGE = dict(x_s=50.0, width=25.0, sigma0=0.8)
@@ -104,6 +113,7 @@ if __name__ == "__main__":
         print(f"   {Om:.2f}   {e:.4f}   {k1_:.5e}      {k2_:.5e}     {k:.5e}   "
               f"{np.log(k)+PI_SQRT2/e:8.4f}   ({time.perf_counter()-t0:.0f} s)")
     Kc = np.array(Kc); eps = np.array(eps)
+    save_csv("stokes_K_of_epsilon.csv", ["Omega", "epsilon", "K_richardson"], zip(Omegas, eps, Kc))
 
     # ================================================================ (3) the fit
     y = np.log(Kc) + PI_SQRT2 / eps
@@ -117,12 +127,25 @@ if __name__ == "__main__":
         r = np.max(np.abs(y - g_fix * np.log(eps) - c))
         print(f"    gamma fixed to {g_fix:.1f}:  C = {np.exp(c):.4f}   max residual = {r:.4f}")
 
+    # Lambda0 is fixed independently by the exact-rational inner recursion.
+    D0, Lambda0, _ = ip.stokes_constant(161, 21, 2)
+    q3 = np.sqrt(8.0 - 9.0 * eps ** 2)
+    y0 = np.log(Kc) + np.pi * q3 / (2.0 * eps) - np.log(Lambda0)
+    X = np.column_stack([eps ** 2, eps ** 4])
+    c2, c4 = np.linalg.lstsq(X, y0, rcond=None)[0]
+    resid0 = y0 - X @ np.array([c2, c4])
+    print("\n    Lambda0-anchored finite-epsilon calibration")
+    print(f"    D = {D0:.10f}   Lambda0 = {Lambda0:.10f}")
+    print(f"    c2 = {c2:.7f}   c4 = {c4:.7f}   max residual = {np.max(np.abs(resid0)):.5f}")
+
     # ================================================================ (4) prediction vs the GSL
-    print("\n(4) prediction for the GSL equation at small b (no fitted quantity beyond C, gamma)")
+    print("\n(4) GSL validation using the Lambda0-anchored canonical response")
     print("     b      a     rho          Kcal(eps)     predicted |A_3|   measured |A_3|   ratio")
     Omega = 0.8
     e0 = np.sqrt(1 - Omega ** 2)
-    Kc0 = np.exp(lnC) * e0 ** gamma * np.exp(-PI_SQRT2 / e0)
+    q30 = np.sqrt(8.0 - 9.0 * e0 ** 2)
+    Kc0 = Lambda0 * np.exp(-np.pi * q30 / (2.0 * e0)
+                           + c2 * e0 ** 2 + c4 * e0 ** 4)
     rows = []
     for b, a in [(0.125, 0.6), (0.25, 0.6), (0.125, 1.0), (0.5, 0.6)]:
         d = gf.DressedGSL(a, b)
@@ -137,17 +160,25 @@ if __name__ == "__main__":
         print(f"   {b:.3f}  {a:.1f}   {rho_g:.5f}    {Kc0:.4e}    {pred:.4e}       {A[3]:.4e}     "
               f"{A[3]/pred:6.3f}   ({time.perf_counter()-t0:.0f} s)")
 
+    save_csv("gsl_prediction_vs_measurement.csv",
+             ["b", "a", "rho", "A3_predicted", "A3_measured"], rows)
+
     # ================================================================ figure
     fig, ax = plt.subplots(1, 2, figsize=(11, 4.2))
     ax[0].semilogy(1.0 / eps, Kc, "o", label="measured")
     xx = np.linspace((1 / eps).min(), (1 / eps).max(), 100)
-    ax[0].semilogy(xx, np.exp(lnC) * (1 / xx) ** gamma * np.exp(-PI_SQRT2 * xx), "-", lw=0.8,
-                   label=f"$C\\,\\epsilon^{{{gamma:.2f}}}\\,e^{{-\\pi\\sqrt{{2}}/\\epsilon}}$, $C$ = {np.exp(lnC):.1f}")
+    ex = 1.0 / xx
+    qx = np.sqrt(8.0 - 9.0 * ex ** 2)
+    model = Lambda0 * np.exp(-np.pi * qx / (2.0 * ex) + c2 * ex ** 2 + c4 * ex ** 4)
+    ax[0].semilogy(xx, model, "-", lw=0.8,
+                   label=r"$\Lambda_0 e^{-\pi q_3/(2\epsilon)+c_2\epsilon^2+c_4\epsilon^4}$")
     ax[0].set_xlabel(r"$1/\epsilon$"); ax[0].set_ylabel(r"$\mathcal{K}=|A_3|/\rho$")
     ax[0].set_title("Stokes constant of the double sine-Gordon perturbation"); ax[0].legend(fontsize=8)
-    ax[1].plot(np.log(eps), y, "o")
-    ax[1].plot(np.log(eps), np.polyval(p, np.log(eps)), "-", lw=0.8)
-    ax[1].set_xlabel(r"$\ln\epsilon$"); ax[1].set_ylabel(r"$\ln\mathcal{K}+\pi\sqrt{2}/\epsilon$")
-    ax[1].set_title(f"$\\gamma$ = {gamma:.3f}, residual < {np.max(np.abs(resid)):.3f}")
+    ax[1].plot(eps ** 2, y0, "o")
+    zz = np.linspace(0.0, eps.max() ** 2, 100)
+    ax[1].plot(zz, c2 * zz + c4 * zz ** 2, "-", lw=0.8)
+    ax[1].set_xlabel(r"$\epsilon^2$")
+    ax[1].set_ylabel(r"$\ln\mathcal{K}+\pi q_3/(2\epsilon)-\ln\Lambda_0$")
+    ax[1].set_title(f"$\\Lambda_0$ = {Lambda0:.4f}, residual < {np.max(np.abs(resid0)):.4f}")
     fig.tight_layout(); fig.savefig("stokes_constant.png", dpi=150)
     print("\nsaved stokes_constant.png")
